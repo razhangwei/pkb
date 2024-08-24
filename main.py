@@ -1,6 +1,6 @@
 import os
-from llama_index import VectorStoreIndex, SimpleDirectoryReader
-from llama_index.llms import OpenAI
+from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
+from llama_index.llms.openai import OpenAI
 
 def load_documents(directory):
     """Load documents from the specified directory"""
@@ -18,7 +18,7 @@ def query_index(index, query):
 
 def main():
     # Specify the directory containing your markdown notes
-    notes_directory = "/Users/wei/Obsidian/Family"
+    notes_directory = "/Users/wei/Obsidian/Family/Parenting/Infant Care"
 
     # Load documents
     documents = load_documents(notes_directory)

@@ -2,8 +2,6 @@ import os
 from llama_index import GPTSimpleVectorIndex, SimpleDirectoryReader
 from llama_index.llms import OpenAI
 
-# Set your OpenAI API key
-os.environ["OPENAI_API_KEY"] = "your-api-key-here"
 
 def load_documents(directory):
     """Load documents from the specified directory"""
@@ -20,7 +18,7 @@ def query_index(index, query):
 
 def main():
     # Specify the directory containing your markdown notes
-    notes_directory = "path/to/your/markdown/notes"
+    notes_directory = "/Users/wei/Obsidian/Family"
 
     # Load documents
     documents = load_documents(notes_directory)
@@ -29,7 +27,7 @@ def main():
     index = create_index(documents)
 
     # Example query
-    query = "What is the capital of France?"
+    query = "What's my son's name?"
     response = query_index(index, query)
     print(f"Query: {query}")
     print(f"Response: {response}")

@@ -6,9 +6,6 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# Set OpenAI API key
-os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
-
 def load_documents(directory):
     """Load documents from the specified directory"""
     return SimpleDirectoryReader(directory).load_data()

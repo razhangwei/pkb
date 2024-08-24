@@ -1,7 +1,13 @@
 import logging
 import os
 import hashlib
-from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings, StorageContext, load_index_from_storage
+from llama_index.core import (
+    VectorStoreIndex,
+    SimpleDirectoryReader,
+    Settings,
+    StorageContext,
+    load_index_from_storage,
+)
 from llama_index.llms.openai import OpenAI
 from llama_index.embeddings.ollama import OllamaEmbedding
 from dotenv import load_dotenv
@@ -19,12 +25,16 @@ embed_model = OllamaEmbedding(model_name="nomic-embed-text")
 Settings.embed_model = embed_model
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 
 def get_file_hash(filepath):
     """Calculate and return the MD5 hash of a file"""
     with open(filepath, "rb") as f:
         return hashlib.md5(f.read()).hexdigest()
+
 
 def load_documents(directory):
     """Load documents from the specified directory"""
@@ -33,22 +43,25 @@ def load_documents(directory):
     logging.info(f"Loaded {len(documents)} documents")
     return documents
 
+
 def create_index(documents, verbose=False):
     """Create an index from the loaded documents"""
     logging.info("Creating index from documents")
     index = VectorStoreIndex.from_documents(
         documents,
         show_progress=verbose,
-        embed_model=Settings.embed_model  # Use the globally configured embed model
+        embed_model=Settings.embed_model,  # Use the globally configured embed model
     )
     logging.info("Index creation completed")
     return index
+
 
 def save_index(index):
     """Save the index to disk"""
     logging.info(f"Saving index to {PERSIST_DIR}")
     index.storage_context.persist(persist_dir=PERSIST_DIR)
     logging.info("Index saved successfully")
+
 
 def load_index():
     """Load the index from disk"""
@@ -58,37 +71,50 @@ def load_index():
     logging.info("Index loaded successfully")
     return index
 
+
 def update_index(index, doc_dir):
     """Update the index with new or modified documents"""
     logging.info("Updating index")
-    documents = SimpleDirectoryReader(doc_dir).load_data()
-    
-    # Get existing document hashes
-    existing_docs = {doc.metadata['file_path']: doc.metadata.get('file_hash') for doc in index.ref_doc_info.values()}
-    
-    # Update document metadata with file hash
-    updated_docs = set()
-    for doc in documents:
-        file_path = doc.metadata['file_path']
-        new_hash = get_file_hash(file_path)
-        doc.metadata['file_hash'] = new_hash
-        if file_path not in existing_docs or existing_docs[file_path] != new_hash:
-            updated_docs.add(file_path)
 
-    # Refresh the index with the new/updated documents
+    # Get existing document information
+    existing_docs = {
+        doc.metadata["file_path"]: (doc.metadata.get("file_hash"), doc)
+        for doc in index.ref_doc_info.values()
+    }
+
+    # Load all documents from the directory
+    all_documents = SimpleDirectoryReader(doc_dir).load_data()
+
+    # Identify new or modified documents
+    documents_to_update = {}
+    for doc in all_documents:
+        file_path = doc.metadata["file_path"]
+        new_hash = get_file_hash(file_path)
+
+        if file_path not in existing_docs or existing_docs[file_path][0] != new_hash:
+            doc.metadata["file_hash"] = new_hash
+            documents_to_update[file_path] = doc
+
+    if not documents_to_update:
+        logging.info("No documents need updating")
+        return
+
+    # Refresh the index with only the new/updated documents
     refreshed_docs = index.refresh_ref_docs(
-        documents,
-        update_kwargs={"delete_kwargs": {"delete_from_docstore": True}}
+        list(documents_to_update.values()),
+        update_kwargs={"delete_kwargs": {"delete_from_docstore": True}},
     )
 
     # Log the refresh results
-    for doc, was_refreshed in zip(documents, refreshed_docs):
-        file_path = doc.metadata['file_path']
-        if was_refreshed and file_path in updated_docs:
-            logging.info(f"Updated/Inserted document: {file_path}")
+    updated_count = 0
+    for doc, was_refreshed in zip(documents_to_update.values(), refreshed_docs):
+        if was_refreshed:
+            logging.info(f"Updated/Inserted document: {doc.metadata['file_path']}")
+            updated_count += 1
 
     save_index(index)
-    logging.info("Index update completed")
+    logging.info(f"Index update completed. Updated {updated_count} documents.")
+
 
 def query_index(index, query):
     """Query the index and return the response"""
@@ -97,6 +123,7 @@ def query_index(index, query):
     response = query_engine.query(query)
     logging.info("Query completed")
     return response.response
+
 
 def main():
     # Specify the directory containing your markdown notes
@@ -122,6 +149,7 @@ def main():
     print(f"Response: {response}")
 
     logging.info("Main execution completed")
+
 
 if __name__ == "__main__":
     main()

@@ -1,6 +1,9 @@
 import logging
 import os
 import hashlib
+from typing import List, Dict, Tuple
+from tqdm import tqdm
+
 from llama_index.core import (
     VectorStoreIndex,
     SimpleDirectoryReader,
@@ -16,8 +19,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Get notes directories from environment variable
-notes_directories_str = os.getenv('NOTES_DIRECTORIES', '')
-notes_directories = [dir.strip() for dir in notes_directories_str.split(',') if dir.strip()]
+notes_directories_str = os.getenv("NOTES_DIRECTORIES", "")
+notes_directories = [
+    dir.strip() for dir in notes_directories_str.split(",") if dir.strip()
+]
 
 # Define the path for storing the index
 PERSIST_DIR = "./stored_index"
@@ -40,7 +45,7 @@ def get_file_hash(filepath):
         return hashlib.md5(f.read()).hexdigest()
 
 
-def load_documents(directory):
+def load_documents(directory: str) -> List:
     """Load documents from the specified directory"""
     logging.info(f"Loading documents from {directory}")
     documents = SimpleDirectoryReader(directory).load_data()
@@ -48,7 +53,7 @@ def load_documents(directory):
     return documents
 
 
-def create_index(documents, verbose=False):
+def create_index(documents: List, verbose: bool = False) -> VectorStoreIndex:
     """Create an index from the loaded documents"""
     logging.info("Creating index from documents")
     index = VectorStoreIndex.from_documents(
@@ -60,14 +65,14 @@ def create_index(documents, verbose=False):
     return index
 
 
-def save_index(index):
+def save_index(index: VectorStoreIndex) -> None:
     """Save the index to disk"""
     logging.info(f"Saving index to {PERSIST_DIR}")
     index.storage_context.persist(persist_dir=PERSIST_DIR)
     logging.info("Index saved successfully")
 
 
-def load_index():
+def load_index() -> VectorStoreIndex:
     """Load the index from disk"""
     logging.info(f"Loading index from {PERSIST_DIR}")
     storage_context = StorageContext.from_defaults(persist_dir=PERSIST_DIR)
@@ -76,23 +81,23 @@ def load_index():
     return index
 
 
-def update_index(index, doc_dirs):
+def update_index(index: VectorStoreIndex, doc_dirs: List[str]) -> None:
     """Update the index with new or modified documents from multiple directories"""
     logging.info("Updating index")
 
     # Get existing document information
-    existing_docs = {
+    existing_docs: Dict[str, Tuple[str, object]] = {
         doc.metadata["file_path"]: (doc.metadata.get("file_hash"), doc)
         for doc in index.ref_doc_info.values()
     }
 
     # Load all documents from the directories
-    all_documents = []
+    all_documents: List = []
     for doc_dir in doc_dirs:
         all_documents.extend(SimpleDirectoryReader(doc_dir).load_data())
 
     # Identify new or modified documents
-    documents_to_update = {}
+    documents_to_update: Dict[str, object] = {}
     for doc in all_documents:
         file_path = doc.metadata["file_path"]
         new_hash = get_file_hash(file_path)
@@ -122,7 +127,7 @@ def update_index(index, doc_dirs):
     logging.info(f"Index update completed. Updated {updated_count} documents.")
 
 
-def query_index(index, query):
+def query_index(index: VectorStoreIndex, query: str) -> str:
     """Query the index and return the response"""
     logging.info(f"Querying index with: {query}")
     query_engine = index.as_query_engine()
@@ -134,7 +139,9 @@ def query_index(index, query):
 def main():
     # Use the notes_directories from the environment variable
     if not notes_directories:
-        logging.error("No notes directories specified in the NOTES_DIRECTORIES environment variable.")
+        logging.error(
+            "No notes directories specified in the NOTES_DIRECTORIES environment variable."
+        )
         return
 
     # Check if the index already exists

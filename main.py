@@ -39,10 +39,13 @@ logging.basicConfig(
 )
 
 
-def get_file_hash(filepath):
+def get_file_hash(filepath: str) -> str:
     """Calculate and return the MD5 hash of a file"""
+    hash_md5 = hashlib.md5()
     with open(filepath, "rb") as f:
-        return hashlib.md5(f.read()).hexdigest()
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
 
 
 def load_documents(directory: str) -> List:
@@ -94,7 +97,9 @@ def update_index(index: VectorStoreIndex, doc_dirs: List[str]) -> None:
     # Load all documents from the directories
     all_documents: List = []
     for doc_dir in doc_dirs:
-        all_documents.extend(SimpleDirectoryReader(doc_dir).load_data())
+        all_documents.extend(
+            SimpleDirectoryReader(doc_dir).load_data(show_progress=True, num_workers=4)
+        )
 
     # Identify new or modified documents
     documents_to_update: Dict[str, object] = {}
@@ -160,7 +165,9 @@ def main():
         save_index(index)
 
     # Example query
-    query = "What are burping methods?"
+    query = (
+        "A Comprehensive Survey of Continual Learning: Theory, Method and Application"
+    )
     response = query_index(index, query)
     print(f"Query: {query}")
     print(f"Response: {response}")

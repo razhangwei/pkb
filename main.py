@@ -93,47 +93,35 @@ def update_index(index: VectorStoreIndex, doc_dirs: List[str]) -> None:
     logging.info("Updating index")
 
     # Get existing document information
-    existing_docs: Dict[str, Tuple[str, object]] = {
-        doc.metadata["file_path"]: (doc.metadata.get("file_hash"), doc)
-        for doc in index.ref_doc_info.values()
+    existing_docs = {
+        doc.metadata["file_path"]: doc.metadata.get("file_hash")
+        for doc in index.docstore.docs.values()
     }
 
     # Load all documents from the directories
-    all_documents: List = []
+    all_documents = []
     for doc_dir in doc_dirs:
-        all_documents.extend(
-            SimpleDirectoryReader(doc_dir).load_data(show_progress=True, num_workers=4)
-        )
+        all_documents.extend(SimpleDirectoryReader(doc_dir).load_data())
 
     # Identify new or modified documents
-    documents_to_update: Dict[str, object] = {}
+    documents_to_update = []
     for doc in all_documents:
         file_path = doc.metadata["file_path"]
         new_hash = get_file_hash(file_path)
 
-        if file_path not in existing_docs or existing_docs[file_path][0] != new_hash:
+        if file_path not in existing_docs or existing_docs[file_path] != new_hash:
             doc.metadata["file_hash"] = new_hash
-            documents_to_update[file_path] = doc
+            documents_to_update.append(doc)
 
     if not documents_to_update:
         logging.info("No documents need updating")
         return
 
-    # Refresh the index with only the new/updated documents
-    refreshed_docs = index.refresh_ref_docs(
-        list(documents_to_update.values()),
-        update_kwargs={"delete_kwargs": {"delete_from_docstore": True}},
-    )
-
-    # Log the refresh results
-    updated_count = 0
-    for doc, was_refreshed in zip(documents_to_update.values(), refreshed_docs):
-        if was_refreshed:
-            logging.info(f"Updated/Inserted document: {doc.metadata['file_path']}")
-            updated_count += 1
+    # Update the index with only the new/updated documents
+    index.refresh_ref_docs(documents_to_update)
 
     save_index(index)
-    logging.info(f"Index update completed. Updated {updated_count} documents.")
+    logging.info(f"Index update completed. Updated {len(documents_to_update)} documents.")
 
 
 def query_index(

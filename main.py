@@ -1,6 +1,7 @@
 import logging
 import os
 import hashlib
+import argparse
 from typing import List, Dict, Tuple
 from tqdm import tqdm
 
@@ -141,7 +142,7 @@ def query_index(index: VectorStoreIndex, query: str) -> str:
     return response.response
 
 
-def main():
+def main(query: str, update_index: bool):
     # Use the notes_directories from the environment variable
     if not notes_directories:
         logging.error(
@@ -153,8 +154,9 @@ def main():
     if os.path.exists(PERSIST_DIR):
         # Load the existing index
         index = load_index()
-        # Update the index with any changes
-        update_index(index, notes_directories)
+        if update_index:
+            # Update the index with any changes
+            update_index(index, notes_directories)
     else:
         # Load documents and create a new index
         documents = []
@@ -164,10 +166,7 @@ def main():
         # Save the new index
         save_index(index)
 
-    # Example query
-    query = (
-        "A Comprehensive Survey of Continual Learning: Theory, Method and Application"
-    )
+    # Query the index
     response = query_index(index, query)
     print(f"Query: {query}")
     print(f"Response: {response}")
@@ -176,4 +175,14 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Query the index and optionally update it."
+    )
+    parser.add_argument("query", type=str, help="The query to search for in the index")
+    parser.add_argument(
+        "--update_index", action="store_true", help="Update the index before querying"
+    )
+
+    args = parser.parse_args()
+
+    main(args.query, args.update_index)

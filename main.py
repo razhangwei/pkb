@@ -1,10 +1,17 @@
 import logging
-from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
+from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings
 from llama_index.llms.openai import OpenAI
+from llama_index.embeddings.ollama import OllamaEmbedding
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Set up Ollama embedding model
+embed_model = OllamaEmbedding(model_name="nomic-embed-text")
+
+# Configure global settings to use Ollama embeddings
+Settings.embed_model = embed_model
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -19,7 +26,11 @@ def load_documents(directory):
 def create_index(documents, verbose=False):
     """Create an index from the loaded documents"""
     logging.info("Creating index from documents")
-    index = VectorStoreIndex.from_documents(documents, show_progress=verbose)
+    index = VectorStoreIndex.from_documents(
+        documents,
+        show_progress=verbose,
+        embed_model=Settings.embed_model  # Use the globally configured embed model
+    )
     logging.info("Index creation completed")
     return index
 

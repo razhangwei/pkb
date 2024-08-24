@@ -1,7 +1,6 @@
 import os
-from llama_index import GPTSimpleVectorIndex, SimpleDirectoryReader
+from llama_index import VectorStoreIndex, SimpleDirectoryReader
 from llama_index.llms import OpenAI
-
 
 def load_documents(directory):
     """Load documents from the specified directory"""
@@ -9,11 +8,12 @@ def load_documents(directory):
 
 def create_index(documents):
     """Create an index from the loaded documents"""
-    return GPTSimpleVectorIndex.from_documents(documents)
+    return VectorStoreIndex.from_documents(documents)
 
 def query_index(index, query):
     """Query the index and return the response"""
-    response = index.query(query)
+    query_engine = index.as_query_engine()
+    response = query_engine.query(query)
     return response.response
 
 def main():

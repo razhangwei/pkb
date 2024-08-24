@@ -34,7 +34,7 @@ def main():
     index = create_index(documents)
 
     # Example query
-    query = "What's my son's name?"
+    query = "What are burping methods?"
     response = query_index(index, query)
     print(f"Query: {query}")
     print(f"Response: {response}")

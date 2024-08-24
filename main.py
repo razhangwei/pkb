@@ -153,7 +153,7 @@ def query_index(
     return response.response
 
 
-def main(query: str, update_index: bool, model_name: str):
+def main(query: str, reindex: bool, model_name: str):
     # Use the notes_directories from the environment variable
     if not notes_directories:
         logging.error(
@@ -165,7 +165,7 @@ def main(query: str, update_index: bool, model_name: str):
     if os.path.exists(PERSIST_DIR):
         # Load the existing index
         index = load_index()
-        if update_index:
+        if reindex:  # Change from update_index to reindex
             # Update the index with any changes
             update_index(index, notes_directories)
     else:
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("query", type=str, help="The query to search for in the index")
     parser.add_argument(
-        "--update_index", action="store_true", help="Update the index before querying"
+        "--reindex", action="store_true", help="Update the index before querying"
     )
     parser.add_argument(
         "--model",
@@ -202,4 +202,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    main(args.query, args.update_index, args.model)
+    main(args.query, args.reindex, args.model)

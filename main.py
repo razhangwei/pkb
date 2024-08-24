@@ -4,6 +4,9 @@ import hashlib
 import argparse
 from typing import List, Dict, Tuple
 from tqdm import tqdm
+from llama_index.llms.gemini import Gemini
+from llama_index.llms.openai import OpenAI
+
 
 from llama_index.core import (
     VectorStoreIndex,
@@ -12,12 +15,12 @@ from llama_index.core import (
     StorageContext,
     load_index_from_storage,
 )
-from llama_index.llms.openai import OpenAI
+
 from llama_index.embeddings.ollama import OllamaEmbedding
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv(override=True)
 
 # Get notes directories from environment variable
 notes_directories_str = os.getenv("NOTES_DIRECTORIES", "")
@@ -133,16 +136,24 @@ def update_index(index: VectorStoreIndex, doc_dirs: List[str]) -> None:
     logging.info(f"Index update completed. Updated {updated_count} documents.")
 
 
-def query_index(index: VectorStoreIndex, query: str) -> str:
+def query_index(
+    index: VectorStoreIndex,
+    query: str,
+    model_name: str,
+) -> str:
     """Query the index and return the response"""
-    logging.info(f"Querying index with: {query}")
-    query_engine = index.as_query_engine()
+    logging.info(f"Querying index with: {query} using model: {model_name}")
+    if model_name.startswith("gemini"):
+        llm = Gemini(model_name="models/" + model_name)
+    else:
+        llm = OpenAI(model=model_name)
+    query_engine = index.as_query_engine(llm=llm)
     response = query_engine.query(query)
     logging.info("Query completed")
     return response.response
 
 
-def main(query: str, update_index: bool):
+def main(query: str, update_index: bool, model_name: str):
     # Use the notes_directories from the environment variable
     if not notes_directories:
         logging.error(
@@ -167,7 +178,7 @@ def main(query: str, update_index: bool):
         save_index(index)
 
     # Query the index
-    response = query_index(index, query)
+    response = query_index(index, query, model_name)
     print(f"Query: {query}")
     print(f"Response: {response}")
 
@@ -182,7 +193,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--update_index", action="store_true", help="Update the index before querying"
     )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="gemini-1.5-flash",
+        help="Specify the model to use for querying",
+    )
 
     args = parser.parse_args()
 
-    main(args.query, args.update_index)
+    main(args.query, args.update_index, args.model)

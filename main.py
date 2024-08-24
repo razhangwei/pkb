@@ -20,7 +20,10 @@ from llama_index.embeddings.ollama import OllamaEmbedding
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv(override=True)
+def load_env():
+    load_dotenv(override=True)
+
+load_env()
 
 # Get notes directories from environment variable
 notes_directories_str = os.getenv("NOTES_DIRECTORIES", "")

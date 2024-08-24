@@ -1,11 +1,15 @@
 import logging
-from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings
+import os
+from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings, StorageContext, load_index_from_storage
 from llama_index.llms.openai import OpenAI
 from llama_index.embeddings.ollama import OllamaEmbedding
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Define the path for storing the index
+PERSIST_DIR = "./stored_index"
 
 # Set up Ollama embedding model
 embed_model = OllamaEmbedding(model_name="nomic-embed-text")
@@ -34,6 +38,20 @@ def create_index(documents, verbose=False):
     logging.info("Index creation completed")
     return index
 
+def save_index(index):
+    """Save the index to disk"""
+    logging.info(f"Saving index to {PERSIST_DIR}")
+    index.storage_context.persist(persist_dir=PERSIST_DIR)
+    logging.info("Index saved successfully")
+
+def load_index():
+    """Load the index from disk"""
+    logging.info(f"Loading index from {PERSIST_DIR}")
+    storage_context = StorageContext.from_defaults(persist_dir=PERSIST_DIR)
+    index = load_index_from_storage(storage_context)
+    logging.info("Index loaded successfully")
+    return index
+
 def query_index(index, query):
     """Query the index and return the response"""
     logging.info(f"Querying index with: {query}")
@@ -46,11 +64,16 @@ def main():
     # Specify the directory containing your markdown notes
     notes_directory = "/Users/wei/Obsidian/Family/Parenting/Infant Care"
 
-    # Load documents
-    documents = load_documents(notes_directory)
-
-    # Create index with verbose mode on
-    index = create_index(documents, verbose=True)
+    # Check if the index already exists
+    if os.path.exists(PERSIST_DIR):
+        # Load the existing index
+        index = load_index()
+    else:
+        # Load documents and create a new index
+        documents = load_documents(notes_directory)
+        index = create_index(documents, verbose=True)
+        # Save the new index
+        save_index(index)
 
     # Example query
     query = "What are burping methods?"

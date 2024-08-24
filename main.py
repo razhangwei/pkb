@@ -15,6 +15,10 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+# Get notes directories from environment variable
+notes_directories_str = os.getenv('NOTES_DIRECTORIES', '')
+notes_directories = [dir.strip() for dir in notes_directories_str.split(',') if dir.strip()]
+
 # Define the path for storing the index
 PERSIST_DIR = "./stored_index"
 
@@ -72,8 +76,8 @@ def load_index():
     return index
 
 
-def update_index(index, doc_dir):
-    """Update the index with new or modified documents"""
+def update_index(index, doc_dirs):
+    """Update the index with new or modified documents from multiple directories"""
     logging.info("Updating index")
 
     # Get existing document information
@@ -82,8 +86,10 @@ def update_index(index, doc_dir):
         for doc in index.ref_doc_info.values()
     }
 
-    # Load all documents from the directory
-    all_documents = SimpleDirectoryReader(doc_dir).load_data()
+    # Load all documents from the directories
+    all_documents = []
+    for doc_dir in doc_dirs:
+        all_documents.extend(SimpleDirectoryReader(doc_dir).load_data())
 
     # Identify new or modified documents
     documents_to_update = {}
@@ -126,18 +132,22 @@ def query_index(index, query):
 
 
 def main():
-    # Specify the directory containing your markdown notes
-    notes_directory = "/Users/wei/Obsidian/Family/Parenting/Infant Care"
+    # Use the notes_directories from the environment variable
+    if not notes_directories:
+        logging.error("No notes directories specified in the NOTES_DIRECTORIES environment variable.")
+        return
 
     # Check if the index already exists
     if os.path.exists(PERSIST_DIR):
         # Load the existing index
         index = load_index()
         # Update the index with any changes
-        update_index(index, notes_directory)
+        update_index(index, notes_directories)
     else:
         # Load documents and create a new index
-        documents = load_documents(notes_directory)
+        documents = []
+        for directory in notes_directories:
+            documents.extend(load_documents(directory))
         index = create_index(documents, verbose=True)
         # Save the new index
         save_index(index)

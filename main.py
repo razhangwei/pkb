@@ -14,14 +14,19 @@ from llama_index.core import (
     Settings,
     StorageContext,
     load_index_from_storage,
+    QueryBundle,
 )
+from llama_index.core.query_engine import RetrieverQueryEngine
+from llama_index.core.retrievers import VectorIndexRetriever
 
 from llama_index.embeddings.ollama import OllamaEmbedding
 from dotenv import load_dotenv
 
+
 # Load environment variables from .env file
 def load_env():
     load_dotenv(override=True)
+
 
 load_env()
 
@@ -55,7 +60,7 @@ def get_file_hash(filepath: str) -> str:
     return hash_md5.hexdigest()
 
 
-def load_documents(directory: str, recursive: bool=True) -> List:
+def load_documents(directory: str, recursive: bool = True) -> List:
     """Load documents recursively from the specified directory and its subdirectories"""
     logging.info(f"Loading documents from {directory}")
     documents = SimpleDirectoryReader(directory, recursive=recursive).load_data()
@@ -124,7 +129,9 @@ def update_index(index: VectorStoreIndex, doc_dirs: List[str]) -> None:
     index.refresh_ref_docs(documents_to_update)
 
     save_index(index)
-    logging.info(f"Index update completed. Updated {len(documents_to_update)} documents.")
+    logging.info(
+        f"Index update completed. Updated {len(documents_to_update)} documents."
+    )
 
 
 def query_index(
@@ -132,26 +139,34 @@ def query_index(
     query: str,
     model_name: str,
     context: str = "",
+    top_k: int = 4,
 ) -> str:
     """Query the index and return the response"""
     logging.info(f"Querying index with: {query} using model: {model_name}")
+
+    # Initialize LLM
     if model_name.startswith("gemini"):
         llm = Gemini(model_name="models/" + model_name)
     else:
         llm = OpenAI(model=model_name)
-    
-    # Create a query engine with the specified LLM
-    query_engine = index.as_query_engine(llm=llm)
-    
+
+    # Create a custom retriever with tunable top_k
+    retriever = VectorIndexRetriever(index=index, similarity_top_k=top_k)
+
+    # Create a query engine with the specified LLM and retriever
+    query_engine = RetrieverQueryEngine.from_args(
+        retriever=retriever, llm=llm, verbose=True
+    )
+
     # Prepare the full query with context
-    full_query = f"Context:\n{context}\n\nNew query: {query}"
-    
+    full_query = f"Context:\n{context}\n\nQuery: {query}"
+
     # Query the index
-    response = query_engine.query(full_query)
-    
+    response = query_engine.query(QueryBundle(full_query))
+
     logging.info("Query completed")
     logging.info(f"Response: {response.response}")
-    
+
     return response.response
 
 

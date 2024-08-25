@@ -55,10 +55,10 @@ def get_file_hash(filepath: str) -> str:
     return hash_md5.hexdigest()
 
 
-def load_documents(directory: str) -> List:
-    """Load documents from the specified directory"""
+def load_documents(directory: str, recursive: bool=True) -> List:
+    """Load documents recursively from the specified directory and its subdirectories"""
     logging.info(f"Loading documents from {directory}")
-    documents = SimpleDirectoryReader(directory).load_data()
+    documents = SimpleDirectoryReader(directory, recursive=recursive).load_data()
     logging.info(f"Loaded {len(documents)} documents")
     return documents
 
@@ -171,7 +171,7 @@ def main(query: str, reindex: bool, model_name: str):
             # Update the index with any changes
             update_index(index, notes_directories)
     else:
-        # Load documents and create a new index
+        # Load documents recursively and create a new index
         documents = []
         for directory in notes_directories:
             documents.extend(load_documents(directory))

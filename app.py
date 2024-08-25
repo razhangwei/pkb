@@ -82,10 +82,8 @@ with st.sidebar:
 # Main query interface
 st.header("Chat with Your Documents")
 
-# Display chat history
-for i, (role, message) in enumerate(st.session_state.chat_history):
-    with st.chat_message(role):
-        st.write(message)
+# Create a container for the chat history
+chat_container = st.container()
 
 # Query input and model selection
 col1, col2 = st.columns([3, 1])
@@ -99,19 +97,27 @@ with col2:
         label_visibility="collapsed"
     )
 
+# Display chat history in the container
+with chat_container:
+    for i, (role, message) in enumerate(st.session_state.chat_history):
+        with st.chat_message(role):
+            st.write(message)
+
 if query:
     # Add user message to chat history
     st.session_state.chat_history.append(("user", query))
-    with st.chat_message("user"):
-        st.write(query)
+    with chat_container:
+        with st.chat_message("user"):
+            st.write(query)
 
     # Prepare context from chat history
     context = "\n".join([f"{role}: {message}" for role, message in st.session_state.chat_history[-5:]])
 
-    with st.chat_message("assistant"):
-        with st.spinner("Processing your query..."):
-            response = main.query_index(st.session_state.index, query, model_name, context)
-        st.write(response)
+    with chat_container:
+        with st.chat_message("assistant"):
+            with st.spinner("Processing your query..."):
+                response = main.query_index(st.session_state.index, query, model_name, context)
+            st.write(response)
 
     # Add assistant response to chat history
     st.session_state.chat_history.append(("assistant", response))

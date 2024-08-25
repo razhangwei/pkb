@@ -131,6 +131,7 @@ def query_index(
     index: VectorStoreIndex,
     query: str,
     model_name: str,
+    context: str = "",
 ) -> str:
     """Query the index and return the response"""
     logging.info(f"Querying index with: {query} using model: {model_name}")
@@ -142,8 +143,11 @@ def query_index(
     # Create a query engine with the specified LLM
     query_engine = index.as_query_engine(llm=llm)
     
+    # Prepare the full query with context
+    full_query = f"Context:\n{context}\n\nNew query: {query}"
+    
     # Query the index
-    response = query_engine.query(query)
+    response = query_engine.query(full_query)
     
     logging.info("Query completed")
     logging.info(f"Response: {response.response}")

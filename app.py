@@ -26,7 +26,11 @@ st.title("Document Query System")
 if 'index' not in st.session_state:
     st.session_state.index = initialize_index()
 
-# Sidebar for index update
+# Initialize chat history
+if 'chat_history' not in st.session_state:
+    st.session_state.chat_history = []
+
+# Sidebar for index update and conversation management
 with st.sidebar:
     st.header("Index Management")
     if st.button("Update Index"):
@@ -35,25 +39,44 @@ with st.sidebar:
         # Force reinitialization of the index
         st.cache_resource.clear()
         st.session_state.index = initialize_index()
+    
+    st.header("Conversation Management")
+    if st.button("Clear Conversation"):
+        st.session_state.chat_history = []
+        st.success("Conversation cleared!")
 
 # Main query interface
-st.header("Query Your Documents")
+st.header("Chat with Your Documents")
 
-query = st.text_input("Enter your query:")
+# Display chat history
+for i, (role, message) in enumerate(st.session_state.chat_history):
+    with st.chat_message(role):
+        st.write(message)
+
+# Query input
+query = st.chat_input("Enter your query:")
 model_name = st.selectbox(
     "Select the model for querying:",
     ["gemini-1.5-flash", "gpt-4o", "gpt-4o-mini"],
     index=0
 )
 
-if st.button("Submit Query"):
-    if query:
+if query:
+    # Add user message to chat history
+    st.session_state.chat_history.append(("user", query))
+    with st.chat_message("user"):
+        st.write(query)
+
+    # Prepare context from chat history
+    context = "\n".join([f"{role}: {message}" for role, message in st.session_state.chat_history[-5:]])
+
+    with st.chat_message("assistant"):
         with st.spinner("Processing your query..."):
-            response = main.query_index(st.session_state.index, query, model_name)
-        st.subheader("Response:")
+            response = main.query_index(st.session_state.index, query, model_name, context)
         st.write(response)
-    else:
-        st.warning("Please enter a query.")
+
+    # Add assistant response to chat history
+    st.session_state.chat_history.append(("assistant", response))
 
 # Display current notes directories
 st.header("Current Notes Directories")

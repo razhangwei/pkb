@@ -69,13 +69,17 @@ for i, (role, message) in enumerate(st.session_state.chat_history):
     with st.chat_message(role):
         st.write(message)
 
-# Query input
-query = st.chat_input("Enter your query:")
-model_name = st.selectbox(
-    "Select the model for querying:",
-    ["gemini-1.5-flash", "gpt-4o", "gpt-4o-mini"],
-    index=0
-)
+# Query input and model selection
+col1, col2 = st.columns([3, 1])
+with col1:
+    query = st.chat_input("Enter your query:")
+with col2:
+    model_name = st.selectbox(
+        "Model:",
+        ["gemini-1.5-flash", "gpt-4o", "gpt-4o-mini"],
+        index=0,
+        label_visibility="collapsed"
+    )
 
 if query:
     # Add user message to chat history
@@ -93,3 +97,6 @@ if query:
 
     # Add assistant response to chat history
     st.session_state.chat_history.append(("assistant", response))
+
+# Display model selection information
+st.caption(f"Current model: {model_name}")

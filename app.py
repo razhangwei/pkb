@@ -70,6 +70,17 @@ with st.sidebar:
         new_dirs = [dir.strip() for dir in new_dirs if dir.strip()]
         st.session_state.notes_directories = new_dirs
         st.success("Notes directories updated!")
+        
+        # Update NOTES_DIRECTORIES environment variable in .env file
+        with open('.env', 'r') as f:
+            lines = f.readlines()
+        with open('.env', 'w') as f:
+            for line in lines:
+                if line.startswith('NOTES_DIRECTORIES='):
+                    f.write(f'NOTES_DIRECTORIES={",".join(new_dirs)}\n')
+                else:
+                    f.write(line)
+        
         # Rebuild the index from scratch
         st.cache_resource.clear()
         documents = []

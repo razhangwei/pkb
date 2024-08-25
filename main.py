@@ -138,9 +138,16 @@ def query_index(
         llm = Gemini(model_name="models/" + model_name)
     else:
         llm = OpenAI(model=model_name)
+    
+    # Create a query engine with the specified LLM
     query_engine = index.as_query_engine(llm=llm)
+    
+    # Query the index
     response = query_engine.query(query)
+    
     logging.info("Query completed")
+    logging.info(f"Response: {response.response}")
+    
     return response.response
 
 

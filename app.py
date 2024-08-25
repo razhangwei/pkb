@@ -34,12 +34,25 @@ if 'chat_history' not in st.session_state:
 # Sidebar for index update, conversation management, and notes directories
 with st.sidebar:
     st.header("Index Management")
-    if st.button("Update Index"):
-        main.update_index(st.session_state.index, st.session_state.notes_directories)
-        st.success("Index updated successfully!")
-        # Force reinitialization of the index
-        st.cache_resource.clear()
-        st.session_state.index = initialize_index()
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Update Index"):
+            main.update_index(st.session_state.index, st.session_state.notes_directories)
+            st.success("Index updated successfully!")
+            # Force reinitialization of the index
+            st.cache_resource.clear()
+            st.session_state.index = initialize_index()
+    with col2:
+        if st.button("Rebuild Index"):
+            # Clear the existing index
+            st.cache_resource.clear()
+            # Rebuild the index from scratch
+            documents = []
+            for directory in st.session_state.notes_directories:
+                documents.extend(main.load_documents(directory))
+            st.session_state.index = main.create_index(documents, verbose=True)
+            main.save_index(st.session_state.index)
+            st.success("Index rebuilt successfully!")
     
     st.header("Conversation Management")
     if st.button("Clear Conversation"):
@@ -57,9 +70,14 @@ with st.sidebar:
         new_dirs = [dir.strip() for dir in new_dirs if dir.strip()]
         st.session_state.notes_directories = new_dirs
         st.success("Notes directories updated!")
-        # Force reinitialization of the index
+        # Rebuild the index from scratch
         st.cache_resource.clear()
-        st.session_state.index = initialize_index()
+        documents = []
+        for directory in st.session_state.notes_directories:
+            documents.extend(main.load_documents(directory))
+        st.session_state.index = main.create_index(documents, verbose=True)
+        main.save_index(st.session_state.index)
+        st.success("Index rebuilt with updated directories!")
 
 # Main query interface
 st.header("Chat with Your Documents")

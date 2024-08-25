@@ -5,8 +5,9 @@ import os
 # Load environment variables
 main.load_dotenv(override=True)
 
-# Get notes directories from environment variable
-notes_directories = main.notes_directories
+# Initialize session state for notes directories
+if 'notes_directories' not in st.session_state:
+    st.session_state.notes_directories = main.notes_directories
 
 @st.cache_resource
 def initialize_index():
@@ -14,7 +15,7 @@ def initialize_index():
         return main.load_index()
     else:
         documents = []
-        for directory in notes_directories:
+        for directory in st.session_state.notes_directories:
             documents.extend(main.load_documents(directory))
         index = main.create_index(documents, verbose=True)
         main.save_index(index)
@@ -30,11 +31,11 @@ if 'index' not in st.session_state:
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 
-# Sidebar for index update and conversation management
+# Sidebar for index update, conversation management, and notes directories
 with st.sidebar:
     st.header("Index Management")
     if st.button("Update Index"):
-        main.update_index(st.session_state.index, notes_directories)
+        main.update_index(st.session_state.index, st.session_state.notes_directories)
         st.success("Index updated successfully!")
         # Force reinitialization of the index
         st.cache_resource.clear()
@@ -44,6 +45,21 @@ with st.sidebar:
     if st.button("Clear Conversation"):
         st.session_state.chat_history = []
         st.success("Conversation cleared!")
+
+    st.header("Notes Directories")
+    # Display and edit current notes directories
+    st.text_area("Current Notes Directories (one per line)", 
+                 value="\n".join(st.session_state.notes_directories), 
+                 key="notes_dirs_input")
+    
+    if st.button("Update Notes Directories"):
+        new_dirs = st.session_state.notes_dirs_input.split("\n")
+        new_dirs = [dir.strip() for dir in new_dirs if dir.strip()]
+        st.session_state.notes_directories = new_dirs
+        st.success("Notes directories updated!")
+        # Force reinitialization of the index
+        st.cache_resource.clear()
+        st.session_state.index = initialize_index()
 
 # Main query interface
 st.header("Chat with Your Documents")
@@ -77,8 +93,3 @@ if query:
 
     # Add assistant response to chat history
     st.session_state.chat_history.append(("assistant", response))
-
-# Display current notes directories
-st.header("Current Notes Directories")
-for directory in notes_directories:
-    st.text(directory)
